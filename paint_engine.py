@@ -1,0 +1,186 @@
+from PyQt5.QtCore import QPointF, Qt
+from layers import Layer
+
+__author__ = 'Valeriy A. Fedotov, valeriy.fedotov@gmail.com'
+
+from queue import Queue
+import math
+from PyQt5.QtGui import (QImage, QPainter, QColor, QBrush, QRadialGradient)
+
+
+class StrokeInterpolator:
+    def __init__(self, spacing, x0, y0, pressure0):
+        self.spacing = spacing
+        self.prev_x = x0
+        self.prev_y = y0
+        self.prev_pressure = pressure0
+        self.offset = 0
+        self.queue = Queue()
+        self.queue.put((x0, y0, pressure0))
+        self.start_ind = 1
+
+    def push_point(self, x, y, pressure):
+        dx = x - self.prev_x
+        dy = y - self.prev_y
+        d_pressure = pressure - self.prev_pressure
+        length = math.hypot(dx, dy)
+
+        if length == 0:
+            return
+
+        if length < self.offset:
+            self.offset -= length
+            self.prev_x = x
+            self.prev_y = y
+            self.prev_pressure = pressure
+            return
+
+        count = int((length - self.offset) / self.spacing)
+        x0 = self.prev_x + self.offset * dx / length
+        y0 = self.prev_y + self.offset * dy / length
+        pressure0 = self.prev_pressure + self.offset * d_pressure / length
+        # print('x0, y0', x0, y0)
+        for i in range(self.start_ind, count + 1):
+            interpolation_parameter = i * self.spacing / length
+            x1 = x0 + dx * interpolation_parameter
+            y1 = y0 + dy * interpolation_parameter
+            # print(interpolation_parameter, x1, y1, self.prev_pressure, pressure)
+            pressure1 = pressure0 + d_pressure * interpolation_parameter
+            self.queue.put((x1, y1, pressure1))
+        self.offset = count * self.spacing + self.offset - length
+        self.start_ind = 1
+        self.prev_x = x
+        self.prev_y = y
+        self.prev_pressure = pressure
+
+    def get_next_point(self):
+        if not self.queue.empty():
+            return self.queue.get()
+        return None
+
+    def push_end_point(self, x_end, y_end, pressure_end):
+        self.push_point(x_end, y_end, pressure_end)
+
+# def notimpl(message):
+#     def wrapper(fun):
+#         raise NotImplementedError(
+#             "{} must be implemented in subclasses of {}".format())
+
+
+class BrushPropertiesInterface:
+    """
+    Storage for current brush properties and cache.
+    """
+
+    def __init__(self):
+        raise NotImplementedError
+
+    # def __setattr__(self, key, value):
+    #     setattr(self, key, value)
+    #     self.update_cache(key)
+
+    def update_cache(self):
+        raise NotImplementedError
+
+    def update_cache_for_key(self, key):
+        raise NotImplementedError
+
+    def properties(self):
+        raise NotImplementedError
+
+    def restore_defaults(self):
+        raise NotImplementedError
+
+    def serialize(self):
+        raise NotImplementedError
+
+
+class BrushInterface:
+    def __init__(self, brush_properties):
+        raise NotImplementedError
+
+    def start_stroke(self, x, y, pressure):
+        raise NotImplementedError
+
+    def continue_stroke(self, x, y, pressure):
+        raise NotImplementedError
+
+    def end_stroke(self, x, y, pressure):
+        raise NotImplementedError
+
+
+class SimpleProperties(BrushPropertiesInterface):
+    def __init__(self, size, spacing, color, hardness=0.0, alpha=0.3):
+        self.alpha = alpha
+        self.props = {'size': size, 'spacing': spacing, 'hardness': hardness}
+        self.color = color
+        self.update_cache()
+
+    def update_cache(self):
+        size = self.props['size']
+        self.cache_stamp = QImage(size, size, QImage.Format_ARGB32)
+        self.cache_stamp.fill(QColor(0, 0, 0, 0))
+        p = QPainter(self.cache_stamp)
+        p.setRenderHint(QPainter.Antialiasing, True)
+        grad = QRadialGradient(QPointF(size/2, size/2), 1.0 * size/2)
+        color1 = QColor(self.color)
+        color1.setAlpha(255 * self.alpha)
+        color2 = QColor(self.color)
+        color2.setAlpha(255 * self.alpha * self.props['hardness'])
+        grad.setColorAt(0, color1)
+        grad.setColorAt(1, color2)
+        br = QBrush(grad)
+        p.setBrush(br)
+        p.setPen(Qt.NoPen)
+        p.drawEllipse(0, 0, size, size)
+        p.end()
+        # self.cache_stamp.fill(QColor(0, 0, 255))
+
+    def update_cache_for_key(self, key):
+        self.update_cache()
+
+    def properties(self):
+        return ['size', 'spacing', 'hardness']
+
+    def restore_defaults(self):
+        return super().restore_defaults()
+
+    def brush_property(self, property_name):
+        return self.props[property_name]
+
+    def serialize(self):
+        return super().serialize()
+
+
+class SimpleBrush(BrushInterface):
+    def __init__(self, canvas: Layer, brush_properties: SimpleProperties):
+        self.properties = brush_properties
+        self.canvas = canvas
+
+    def start_stroke(self, x, y, pressure):
+        self.interpolator = StrokeInterpolator(self.properties.brush_property('spacing'), x, y, pressure)
+        self.draw_to_new_point()
+
+    def continue_stroke(self, x, y, pressure):
+        self.interpolator.push_point(x, y, pressure)
+        self.draw_to_new_point()
+
+    def end_stroke(self, x, y, pressure):
+        self.interpolator.push_point(x, y, pressure)
+        self.draw_to_new_point()
+
+    def draw_to_new_point(self):
+        print("draw_to_new_point")
+        # p = QPainter(self.canvas)
+        size = self.properties.brush_property('size')
+        while True:
+            next_point = self.interpolator.get_next_point()
+            print("next_point", next_point)
+            if next_point is None:
+                break
+            x, y, pressure = next_point
+            x, y = x - size // 2, y - size // 2
+            print("drawing at", x, y)
+            self.canvas.drawQImage(x, y, self.properties.cache_stamp)
+            # p.drawImage(x, y, self.properties.cache_stamp)
+        # p.end()
