@@ -1,16 +1,13 @@
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QSlider, QApplication, QLabel, QGridLayout, QSizePolicy
 import sys
+
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QWidget, QSlider, QApplication, QLabel, QGridLayout, QSizePolicy
+
+from paint_engine import PropertyDescription
+
 
 __author__ = 'vfedotov'
 
-class PropertyDescription:
-    def __init__(self, name, min, max, default, editorType='slider'):
-        self.name = name
-        self.min = min
-        self.max = max
-        self.default = default
-        self.editorType = editorType
 
 class BrushWidget(QWidget):
     def __init__(self, propertyList):
@@ -32,6 +29,7 @@ class BrushWidget(QWidget):
             def update(editor):
                 return lambda x: editor.setText(str(x))
             slider.valueChanged.connect(update(valueLabel))
+            slider.valueChanged.connect(prop.updater)
             slider.setValue(prop.default)
             self.editors[prop.name] = [nameLabel, slider, valueLabel]
             self.grid.setRowStretch(rowInd, 0)

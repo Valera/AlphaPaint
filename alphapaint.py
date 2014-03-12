@@ -1,12 +1,13 @@
-from _curses import COLOR_WHITE
 from PyQt5.QtCore import Qt
-from brushwidget import BrushWidget, PropertyDescription
+
+from brushwidget import BrushWidget
 from colorcircle import ColorCircle
+
 
 __author__ = 'Valeriy A. Fedotov, valeriy.fedotov@gmail.com'
 
 import sys
-from PyQt5.QtWidgets import (QMainWindow, QApplication, QAction, QScrollArea, QScrollBar, QDockWidget)
+from PyQt5.QtWidgets import (QMainWindow, QApplication, QAction, QDockWidget)
 from painting import PaintWidget, CustomScrollArea
 
 
@@ -20,13 +21,7 @@ class AlphaPaintWindow(QMainWindow):
         self.scrollArea = CustomScrollArea()
         self.setCentralWidget(self.scrollArea)
         self.setWindowTitle("AlphaPaint v0.001")
-        self.brushDock = QDockWidget()
-        self.brushDock.setWidget(BrushWidget([PropertyDescription('Size', 1, 500, 20),
-                                              PropertyDescription('Opacity', 0, 255, 255),
-                                              PropertyDescription('Hardness', 0, 255, 255),
-                                              PropertyDescription('Spacing', 1, 20, 10)]))
-        # self.brushDock.show()
-        self.addDockWidget(Qt.LeftDockWidgetArea, self.brushDock)
+
         self.colorDock = QDockWidget()
         self.colorDockWidget = ColorCircle(0, 0, 0)
         self.colorDock.setWidget(self.colorDockWidget)
@@ -67,6 +62,10 @@ class AlphaPaintWindow(QMainWindow):
         self.scrollArea.setWidget(self.painting)
         # self.setCentralWidget(self.painting)
         self.colorDockWidget.HSVChanged.connect(self.painting.setBrushHSV)
+
+        self.brushDock = QDockWidget()
+        self.brushDock.setWidget(BrushWidget(self.painting.brush_properties.propertyDescriptions()))
+        self.addDockWidget(Qt.LeftDockWidgetArea, self.brushDock)
 
     def openFile(self):
         pass  # TODO: implement open File

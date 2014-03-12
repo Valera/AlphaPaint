@@ -1,5 +1,7 @@
 from PyQt5.QtCore import QPointF, Qt
+
 from layers import Layer
+
 
 __author__ = 'Valeriy A. Fedotov, valeriy.fedotov@gmail.com'
 
@@ -111,8 +113,7 @@ class BrushInterface:
 
 class SimpleProperties(BrushPropertiesInterface):
     def __init__(self, size, spacing, color, hardness=0.0, alpha=0.3):
-        self.alpha = alpha
-        self.props = {'size': size, 'spacing': spacing, 'hardness': hardness}
+        self.props = {'size': size, 'spacing': spacing, 'hardness': hardness, 'alpha': alpha}
         self.color = color
         self.update_cache()
 
@@ -124,9 +125,9 @@ class SimpleProperties(BrushPropertiesInterface):
         p.setRenderHint(QPainter.Antialiasing, True)
         grad = QRadialGradient(QPointF(size/2, size/2), 1.0 * size/2)
         color1 = QColor(self.color)
-        color1.setAlpha(255 * self.alpha)
+        color1.setAlpha(self.props['alpha'])
         color2 = QColor(self.color)
-        color2.setAlpha(255 * self.alpha * self.props['hardness'])
+        color2.setAlpha(self.props['alpha'] * self.props['hardness'] / 255)
         grad.setColorAt(0, color1)
         grad.setColorAt(1, color2)
         br = QBrush(grad)
@@ -140,13 +141,25 @@ class SimpleProperties(BrushPropertiesInterface):
         self.update_cache()
 
     def properties(self):
-        return ['size', 'spacing', 'hardness']
+        return ['size', 'spacing', 'hardness', 'alpha']
+
+    def propertyDescriptions(self):
+        return [
+            PropertyDescription('Size', 1, 500, 20, lambda x: self.setBrushProperty('size', x)),
+            PropertyDescription('Opacity', 0, 255, 255, lambda x: self.setBrushProperty('alpha', x)),
+            PropertyDescription('Hardness', 0, 255, 255, lambda x: self.setBrushProperty('hardness', x)),
+            PropertyDescription('Spacing', 1, 20, 10, lambda x: self.setBrushProperty('spacing', x))
+        ]
 
     def restore_defaults(self):
         return super().restore_defaults()
 
     def brush_property(self, property_name):
         return self.props[property_name]
+
+    def setBrushProperty(self, property, value):
+        self.props[property] = value
+        self.update_cache()
 
     def serialize(self):
         return super().serialize()
@@ -184,3 +197,13 @@ class SimpleBrush(BrushInterface):
             self.canvas.drawQImage(x, y, self.properties.cache_stamp)
             # p.drawImage(x, y, self.properties.cache_stamp)
         # p.end()
+
+
+class PropertyDescription:
+    def __init__(self, name, min, max, default, updater, editorType='slider'):
+        self.name = name
+        self.min = min
+        self.max = max
+        self.default = default
+        self.editorType = editorType
+        self.updater = updater
