@@ -30,6 +30,8 @@ class Layer:
         qp.drawImage(QPoint(x, y), qimage)
         qp.end()
 
+    def pixelColor(self, x, y):
+        return QColor(self.image.pixel(x, y))
 
     def drawUpdatedRect(self, qp: QPainter):
         if  self.updated_rect is not None:

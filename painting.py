@@ -1,11 +1,11 @@
 __author__ = 'Valeriy A. Fedotov, valeriy.fedotov@gmail.com'
 
-from PyQt5.QtCore import (QSize, QPoint, QRect, Qt, QPointF)
+from PyQt5.QtCore import (QSize, QRect, Qt, pyqtSignal)
 from PyQt5.QtWidgets import (QWidget, QScrollArea)
-from PyQt5.QtGui import (QImage, QPainter, QColor, QMouseEvent, QPaintEvent, QKeyEvent, QCursor, QPixmap, QBitmap)
+from PyQt5.QtGui import (QPainter, QColor, QMouseEvent, QPaintEvent, QKeyEvent, QCursor, QPixmap)
 
 import paint_engine
-from layers import LayerStack, Layer
+from layers import LayerStack
 
 
 class CustomScrollArea(QScrollArea):
@@ -77,6 +77,8 @@ class CustomScrollArea(QScrollArea):
 class PaintWidget(QWidget):
     BORDER = 500 # TODO: change border dynamically when window size is changed.
 
+    colorChanged = pyqtSignal(QColor)
+
     def __init__(self, width, height):
         super().__init__()
         self.mouseEnabled = 1
@@ -105,6 +107,12 @@ class PaintWidget(QWidget):
         self.brushColor = QColor.fromHsv(h, s, v)
         self.brush_properties.color = self.brushColor
         self.brush_properties.update_cache()
+
+    def setBrushColor(self, color):
+        self.brushColor = QColor(color)
+        self.brush_properties.color = self.brushColor
+        self.brush_properties.update_cache()
+        self.colorChanged.emit(self.brushColor)
 
     def __adjustSize(self):
         self.canvasWidth = self.layerStack.width * self.zoomFactor
@@ -157,6 +165,9 @@ class PaintWidget(QWidget):
         self.setAttribute(Qt.WA_NoMousePropagation, isEnabled)
         self.mouseEnabled = isEnabled
 
+    def widgetCoordinatesOnCanvas(self, widgetX, widgetY):
+        return (widgetX - self.BORDER) / self.zoomFactor, (widgetY - self.BORDER) / self.zoomFactor
+
     def mousePressEvent(self, e: QMouseEvent):
         if not self.mouseEnabled:
             return super().mousePressEvent(e)
@@ -165,28 +176,43 @@ class PaintWidget(QWidget):
             self.dragStart = e.x(), e.y()
             return
 
-        modifiers = e.modifiers()
+        if Qt.AltModifier & e.modifiers():
+            x, y = self.widgetCoordinatesOnCanvas(e.x(), e.y())
+            # TODO: Pixel color with regard to zoom.
+            color = self.layerStack.activeLayer().pixelColor(x, y)
+            self.setBrushColor(color)
+            print('new color', color)
+            return
+
+
         # print(modifiers &
 
         self.brush = paint_engine.SimpleBrush(self.layerStack.activeLayer(), self.brush_properties)
-        self.brush.start_stroke((e.x() - self.BORDER) / self.zoomFactor, (e.y() - self.BORDER) / self.zoomFactor, 1)
+        x, y = self.widgetCoordinatesOnCanvas(e.x(), e.y())
+        self.brush.start_stroke(x, y, 1)
         self.update()  # FIXME: ineffective
 
     def mouseMoveEvent(self, e: QMouseEvent):
         if not self.mouseEnabled:
             return super().mouseMoveEvent(e)
+        if Qt.AltModifier & e.modifiers():
+            return
         if self.mode == 'drag':
             print(1234)
             self.setGeometry(10, 10, 10, 10)
 
-        self.brush.continue_stroke((e.x() - self.BORDER) / self.zoomFactor, (e.y() - self.BORDER) / self.zoomFactor, 1)
+        x, y = self.widgetCoordinatesOnCanvas(e.x(), e.y())
+        self.brush.continue_stroke(x, y, 1)
         self.update()
 
     def mouseReleaseEvent(self, e: QMouseEvent):
         if not self.mouseEnabled:
             return super().mouseReleaseEvent(e)
+        if Qt.AltModifier & e.modifiers():
+            return
 
-        self.brush.end_stroke((e.x() - self.BORDER) / self.zoomFactor, (e.y() - self.BORDER) / self.zoomFactor, 1)
+        x, y = self.widgetCoordinatesOnCanvas(e.x(), e.y())
+        self.brush.end_stroke(x, y, 1)
         self.update()
 
     def increaseBrushSize(self):

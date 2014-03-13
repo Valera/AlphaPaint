@@ -21,6 +21,8 @@ def dist_to_line(x_probed, y_probed, x_base, y_base, dx, dy):
 
 class ColorCircle(QWidget):
     HSVChanged = pyqtSignal(int, int, int)
+    colorChanged = pyqtSignal(QColor)
+
     def __init__(self, hue: int, saturation: int, value: int):
         super().__init__()
         self.h = hue
@@ -175,6 +177,24 @@ class ColorCircle(QWidget):
 
     def mouseMoveEvent(self, e: QMouseEvent):
         self.processColorSelection(e)
+
+    def setColor(self, color: QColor):
+        """
+        Sets new color for color circle. Updates color circle display,
+        emits HSVChanged signal if color has actually changed.
+
+        @param color: new color
+        """
+        print('newColor!!!')
+        hsv = (color.hue(), color.saturation(), color.value())
+        oldHSV = self.h, self.s, self.v
+        self.h, self.s, self.v = hsv
+        if self.s == 0:
+            self.h = oldHSV[0]
+        if hsv != oldHSV:
+            self.HSVChanged.emit(*hsv)
+            self.updateCache()
+            self.update()
 
     def sizeHint(self):
         return QSize(200, 200)

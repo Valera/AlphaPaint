@@ -62,6 +62,7 @@ class AlphaPaintWindow(QMainWindow):
         self.scrollArea.setWidget(self.painting)
         # self.setCentralWidget(self.painting)
         self.colorDockWidget.HSVChanged.connect(self.painting.setBrushHSV)
+        self.painting.colorChanged.connect(self.colorDockWidget.setColor)
 
         self.brushDock = QDockWidget()
         self.brushDock.setWidget(BrushWidget(self.painting.brush_properties.propertyDescriptions()))
