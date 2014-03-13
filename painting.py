@@ -44,6 +44,8 @@ class CustomScrollArea(QScrollArea):
             self.widget().increaseBrushSize()
         elif e.text() == '[':
             self.widget().decreaseBrushSize()
+        elif e.modifiers() & Qt.AltModifier:
+            return self.widget().keyPressEvent(e)
         else:
             return super().keyPressEvent(e)
 
@@ -54,6 +56,8 @@ class CustomScrollArea(QScrollArea):
             print('Back to NormalMode')
             self.mode = self.NormalMode # FIXME: correct work if space is released before dragging ends.
             self.widget().setMouseInteraction(True)
+        elif e.text() == '':
+            return self.widget().keyPressEvent(e)
         else:
             return super().keyPressEvent(e)
 
@@ -229,16 +233,31 @@ class PaintWidget(QWidget):
 
     def tabletEvent(self, tabletEvent):
         pass
-    #
-    # def keyPressEvent(self, e: QKeyEvent):
-    #     if e.text() == ' ':
-    #         print("space")
-    #         self.mode = 'drag'
-    #
-    # def keyReleaseEvent(self, QKeyEvent):
-    #     if e.text() == ' ':
-    #         self.mode = None
 
+    def enterPickerMode(self):
+        self.mode = 'picker'
+        pmap = QPixmap(3, 3)
+        pmap.fill(QColor(0, 0, 0, 0))
+        p = QPainter(pmap)
+        p.drawEllipse(0, 0, 2, 2)
+        p.end()
+        self.setCursor(QCursor(pmap))
+
+    def leavePickerMode(self):
+        self.mode = None
+        self.updateBrushCursor()
+
+    def inPickerMode(self):
+        return self.mode == 'picker'
+
+    def keyPressEvent(self, e: QKeyEvent):
+        if Qt.AltModifier & e.modifiers():
+            self.enterPickerMode()
+        elif self.inPickerMode():
+            self.leavePickerMode()
+
+    def keyReleaseEvent(self, e: QKeyEvent):
+        pass
 
 
 class PaintingInterface:
