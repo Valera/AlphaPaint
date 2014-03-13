@@ -1,8 +1,10 @@
 from math import floor, ceil, hypot, pi, atan2, sqrt, radians, cos, sin
 import sys
+
 from PyQt5.QtCore import QPointF, Qt, QSize, pyqtSignal
 from PyQt5.QtGui import QPainter, QColor, QPen, QMouseEvent, QImage
 from PyQt5.QtWidgets import QWidget, QApplication
+
 
 __author__ = 'vfedotov'
 
@@ -143,6 +145,10 @@ class ColorCircle(QWidget):
         p.end()
 
     def mousePressEvent(self, e: QMouseEvent):
+        self.activeElement = None
+        self.processColorSelection(e)
+
+    def processColorSelection(self, e: QMouseEvent):
         x, y = e.x(), e.y()
         w, h = self.width(), self.height()
         L = min(w, h)
@@ -152,18 +158,23 @@ class ColorCircle(QWidget):
         halfSide = ceil(R_sqr * sqrt(2) / 2)
         dx, dy = x - w / 2, y - h / 2
         print(dx, dy)
-        if R_in < hypot(dx, dy) < R_out:
+        if R_in < hypot(dx, dy) < R_out and self.activeElement is None or self.activeElement == 'ring':
             self.h = atan2_in_degs(dy, dx)
             self.HSVChanged.emit(self.h, self.s, self.v)
-        if abs(dx) < halfSide and abs(dy) < halfSide:
+            self.activeElement = 'ring'
+            self.update()
+            return
+        if abs(dx) < halfSide and abs(dy) < halfSide and self.activeElement is None or self.activeElement == 'square':
             self.v = 255 * (halfSide - dy) / (2 * halfSide)
             self.s = 255 * (dx + halfSide) / (2 * halfSide)
+            self.v = min(255, max(0, self.v))
+            self.s = min(255, max(0, self.s))
             self.HSVChanged.emit(self.h, self.s, self.v)
-        self.update()
+            self.activeElement = 'square'
+            self.update()
 
     def mouseMoveEvent(self, e: QMouseEvent):
-        # TODO: dragging outside of active regions.
-        return self.mousePressEvent(e)
+        self.processColorSelection(e)
 
     def sizeHint(self):
         return QSize(200, 200)

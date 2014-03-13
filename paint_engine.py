@@ -159,7 +159,8 @@ class SimpleProperties(BrushPropertiesInterface):
 
     def setBrushProperty(self, property, value):
         self.props[property] = value
-        self.update_cache()
+        if property != 'spacing':
+            self.update_cache()
 
     def serialize(self):
         return super().serialize()
@@ -201,9 +202,22 @@ class SimpleBrush(BrushInterface):
 
 class PropertyDescription:
     def __init__(self, name, min, max, default, updater, editorType='slider'):
+        """
+        Storage Class for brush properties.
+
+        @param name: name of property, string
+        @param min: minimal value for graphical control
+        @param max: maximal value
+        @param default: default value for graphical control
+        @param updater: function of one parameter that is called to update property of th
+            current brush
+        @param editorType: graphical control type
+        """
         self.name = name
         self.min = min
         self.max = max
         self.default = default
         self.editorType = editorType
         self.updater = updater
+
+        # TODO: decide how to switch between different brush presets.
