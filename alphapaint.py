@@ -1,4 +1,4 @@
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QEvent
 
 from brushwidget import BrushWidget
 from colorcircle import ColorCircle
@@ -8,6 +8,7 @@ __author__ = 'Valeriy A. Fedotov, valeriy.fedotov@gmail.com'
 
 import sys
 from PyQt5.QtWidgets import (QMainWindow, QApplication, QAction, QDockWidget)
+import PyQt5.QtWidgets
 from painting import PaintWidget, CustomScrollArea
 
 
@@ -78,9 +79,30 @@ class AlphaPaintWindow(QMainWindow):
         pass  # TODO: implement saveAs File
 
 
+# Class with ugly workaround for QTabletEvent.accept not working
+# (still triggering mouse event when accepted)
+# in pyqt5.0.1 and Qt5.0.2.
+class AlphaPaintApplication(QApplication):
+    def __init__(self, argv):
+        super().__init__(argv)
+        self.stylusIsNearTablet = False
+
+    def event(self, e: QEvent):
+        if e.type() == QEvent.TabletEnterProximity:
+            self.stylusIsNearTablet = True
+            return True
+        elif e.type() == QEvent.TabletLeaveProximity:
+            self.stylusIsNearTablet = False
+            return True
+        return super().event(e)
+
+
 if __name__ == "__main__":
-    app = QApplication(sys.argv)
+    app = AlphaPaintApplication(sys.argv)
+    PyQt5.QtWidgets.qApp = app
     w = AlphaPaintWindow()
     w.show()
     app.exec_()
     print('hello')
+
+    # TODO: write project description file.

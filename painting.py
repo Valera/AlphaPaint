@@ -2,7 +2,8 @@ __author__ = 'Valeriy A. Fedotov, valeriy.fedotov@gmail.com'
 
 from PyQt5.QtCore import (QSize, QRect, Qt, pyqtSignal)
 from PyQt5.QtWidgets import (QWidget, QScrollArea)
-from PyQt5.QtGui import (QPainter, QColor, QMouseEvent, QPaintEvent, QKeyEvent, QCursor, QPixmap)
+import PyQt5.QtWidgets
+from PyQt5.QtGui import (QPainter, QColor, QMouseEvent, QPaintEvent, QKeyEvent, QCursor, QPixmap, QTabletEvent)
 
 import paint_engine
 from layers import LayerStack
@@ -14,6 +15,7 @@ class CustomScrollArea(QScrollArea):
 
     def __init__(self):
         super().__init__()
+        self.mode = self.NormalMode
         # self.setAttribute(Qt.WA_KeyCompression, True)
 
     def setWidget(self, w: QWidget):
@@ -62,10 +64,8 @@ class CustomScrollArea(QScrollArea):
             return super().keyPressEvent(e)
 
     def mousePressEvent(self, e: QMouseEvent):
-        print(456)
         if self.mode == self.NormalMode:
             return super().mousePressEvent(e)
-        print('123')
         self.baseSBX = self.horizontalScrollBar().value()
         self.baseSBY = self.verticalScrollBar().value()
         self.baseX = e.x()
@@ -76,6 +76,9 @@ class CustomScrollArea(QScrollArea):
             return super().mouseMoveEvent(e)
         self.horizontalScrollBar().setValue(self.baseSBX - e.x() + self.baseX)
         self.verticalScrollBar().setValue(self.baseSBY - e.y() + self.baseY)
+
+    def tabletEvent(self, e: QTabletEvent):
+        e.accept()
 
 
 class PaintWidget(QWidget):
@@ -96,6 +99,7 @@ class PaintWidget(QWidget):
         # p = QPainter(self.canvas)
         # p.drawEllipse(0, 0, width, height)
         self.mode = None
+        self.inBrushStroke = False
         self.updateBrushCursor()
 
     def updateBrushCursor(self):
@@ -173,8 +177,12 @@ class PaintWidget(QWidget):
         return (widgetX - self.BORDER) / self.zoomFactor, (widgetY - self.BORDER) / self.zoomFactor
 
     def mousePressEvent(self, e: QMouseEvent):
+        print('mousePressEvent')
+
         if not self.mouseEnabled:
             return super().mousePressEvent(e)
+        if PyQt5.QtWidgets.qApp.stylusIsNearTablet:
+            return
 
         if self.mode == 'drag':
             self.dragStart = e.x(), e.y()
@@ -197,8 +205,13 @@ class PaintWidget(QWidget):
         self.update()  # FIXME: ineffective
 
     def mouseMoveEvent(self, e: QMouseEvent):
+        print('mouseMoveEvent')
+
         if not self.mouseEnabled:
             return super().mouseMoveEvent(e)
+        if PyQt5.QtWidgets.qApp.stylusIsNearTablet:
+            return
+
         if Qt.AltModifier & e.modifiers():
             return
         if self.mode == 'drag':
@@ -210,13 +223,19 @@ class PaintWidget(QWidget):
         self.update()
 
     def mouseReleaseEvent(self, e: QMouseEvent):
+        print('mouseReleaseEvent')
+
         if not self.mouseEnabled:
             return super().mouseReleaseEvent(e)
+        if PyQt5.QtWidgets.qApp.stylusIsNearTablet:
+            return
+
         if Qt.AltModifier & e.modifiers():
             return
 
         x, y = self.widgetCoordinatesOnCanvas(e.x(), e.y())
         self.brush.end_stroke(x, y, 1)
+        self.brush = None
         self.update()
 
     def increaseBrushSize(self):
@@ -231,8 +250,33 @@ class PaintWidget(QWidget):
         self.updateBrushCursor()
         # self.unsetCursor()
 
-    def tabletEvent(self, tabletEvent):
-        pass
+    def tabletEvent(self, e: QTabletEvent):
+        print('tabletEvent')
+        # e.accept()
+        # return
+        # if not self.mouseEnabled:
+        #     e.ignore()
+        #     return
+        posF = e.posF()
+        x, y = self.widgetCoordinatesOnCanvas(posF.x(), posF.y())
+        if e.pressure() == 0:
+            if self.inBrushStroke:
+                self.setMouseInteraction(True)
+                self.inBrushStroke = False
+                self.brush.end_stroke(x, y, e.pressure())
+                self.brush = None
+            e.accept()
+            self.update()
+            return
+        self.setMouseInteraction(False)
+        if self.inBrushStroke:
+            self.brush.continue_stroke(x, y, e.pressure())
+        else:
+            self.inBrushStroke = True
+            self.brush = paint_engine.SimpleBrush(self.layerStack.activeLayer(), self.brush_properties)
+            self.brush.start_stroke(x, y, e.pressure())
+        e.accept()
+        self.update()
 
     def enterPickerMode(self):
         self.mode = 'picker'

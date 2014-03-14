@@ -111,6 +111,7 @@ class BrushInterface:
         raise NotImplementedError
 
 
+# TODO: Move brush settings to a class property
 class SimpleProperties(BrushPropertiesInterface):
     def __init__(self, size, spacing, color, hardness=0.0, alpha=0.3):
         self.props = {'size': size, 'spacing': spacing, 'hardness': hardness, 'alpha': alpha}
