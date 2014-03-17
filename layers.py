@@ -7,14 +7,11 @@ __author__ = 'Valeriy A. Fedotov, valeriy.fedotov@gmail.com'
 class Layer:
     NormalMode = 1
 
-    def __init__(self, width, height):
+    def __init__(self, width, height, color=QColor(255, 255, 255)):
         self.width = width
         self.height = height
         self.image = QImage(width, height, QImage.Format_ARGB32)
-        self.image.fill(QColor(255, 255, 255))
-        p = QPainter(self.image)
-        p.drawEllipse(0, 0, width-1, height-1)
-        p.end()
+        self.image.fill(QColor(color))
         self.alpha = 1
         self.mode = self.NormalMode
         self.updated_rect = None
@@ -34,7 +31,7 @@ class Layer:
         return QColor(self.image.pixel(x, y))
 
     def drawUpdatedRect(self, qp: QPainter):
-        if  self.updated_rect is not None:
+        if self.updated_rect is not None:
             qp.drawImage(QRect(0, 0, self.updated_rect.width(), self.updated_rect.height()),
                          self.image, self.updated_rect)
             self.updated_rect = None
@@ -57,24 +54,26 @@ class LayerStack:
     def activeLayer(self):
         return self.layers[self.currentInd]
 
-    def move_layer(self, layer_ind, dx, dy):
-        pass
+    def setActiveLayer(self, index):
+        self.currentInd = index
+
+    # def move_layer(self, layer_ind, dx, dy):
+    #     pass
 
     def layer_count(self):
         return len(self.layers)
 
     def add_layer_above(self):
-        pass
+        self.layers.insert(self.currentInd + 1, Layer(self.width, self.height, QColor(0, 0, 0, 0)))
 
     def deleteCurrentLayer(self):
-        pass
+        self.layers.pop(self.currentInd)
+        self.currentInd -= 1
 
     def move_layer_in_stack(self, old_ind, new_ind):
-        pass
-
-    def draw_on_qpainter(self, qpainter: QPainter):
-        """Вывод в окошко для пользователя"""
-        qpainter.drawImage(0, 0, self.cache)
+        assert (0 < old_ind < len(self.layers))
+        assert (0 < new_ind < len(self.layers))
+        self.layers.insert(new_ind, self.layers.pop(old_ind))
 
     def cacheFullUpdate(self):
         cacheWidth = self.width * self.scaleFactor
