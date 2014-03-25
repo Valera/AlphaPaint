@@ -1,7 +1,12 @@
+import sys
+
+import ui
+
+
 __author__ = 'Valeriy A. Fedotov, valeriy.fedotov@gmail.com'
 
 from PyQt5.QtCore import (QSize, QRect, Qt, pyqtSignal)
-from PyQt5.QtWidgets import (QWidget, QScrollArea)
+from PyQt5.QtWidgets import (QWidget, QScrollArea, QDialog, QApplication)
 import PyQt5.QtWidgets
 from PyQt5.QtGui import (QPainter, QColor, QMouseEvent, QPaintEvent, QKeyEvent, QCursor, QPixmap, QTabletEvent)
 
@@ -333,3 +338,21 @@ class LayerInterface:
 
     def draw_brush_stamp(self):
         pass
+
+
+class NewPaintingDialog(QDialog):
+    def __init__(self):
+        super().__init__()
+        self.ui = ui.new_painting_dialog.Ui_Dialog()
+        self.ui.setupUi(self)
+
+
+def main():
+    app = QApplication(sys.argv)
+    w = NewPaintingDialog()
+    w.show()
+    app.exec_()
+
+
+if __name__ == "__main__":
+    main()
