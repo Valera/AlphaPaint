@@ -1,3 +1,4 @@
+from threading import _MainThread
 from PyQt5.QtCore import QPointF, Qt
 
 from layers import Layer
@@ -122,6 +123,7 @@ class SimpleProperties(BrushPropertiesInterface):
         size = self.props['size']
         self.cache_stamp = QImage(size, size, QImage.Format_ARGB32)
         self.cache_stamp.fill(QColor(0, 0, 0, 0))
+        # TODO: move all painting to 'with' statements
         p = QPainter(self.cache_stamp)
         p.setRenderHint(QPainter.Antialiasing, True)
         grad = QRadialGradient(QPointF(size/2, size/2), 1.0 * size/2)
@@ -187,18 +189,19 @@ class SimpleBrush(BrushInterface):
     def draw_to_new_point(self):
         print("draw_to_new_point")
         # p = QPainter(self.canvas)
-        size = self.properties.brush_property('size')
         while True:
             next_point = self.interpolator.get_next_point()
             print("next_point", next_point)
             if next_point is None:
                 break
             x, y, pressure = next_point
+            size = self.properties.brush_property('size')
+            size = math.ceil(size * pressure)
             x, y = x - size // 2, y - size // 2
             print("drawing at", x, y)
             self.canvas.drawQImage(x, y, self.properties.cache_stamp)
             # p.drawImage(x, y, self.properties.cache_stamp)
-        # p.end()
+            # p.end()
 
 
 class PropertyDescription:

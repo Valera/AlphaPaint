@@ -1,9 +1,10 @@
 import sys
 
-from PyQt5.QtCore import QRectF, QVariant, QPointF
+from PyQt5.QtCore import QRectF, QVariant, QPointF, Qt
 from PyQt5.QtGui import QPainter, QColor
 from PyQt5.QtWidgets import QApplication, QGraphicsView, QGraphicsScene, QGraphicsItem, QStyleOptionGraphicsItem, \
     QGraphicsSceneMouseEvent, QGraphicsRectItem
+from layers import LayerStack
 
 
 __author__ = 'Valeriy A. Fedotov, valeriy.fedotov@gmail.com'
@@ -43,6 +44,12 @@ class LayerItem(QGraphicsItem):
             return pos
         return value
 
+    def mousePressEvent(self, QGraphicsSceneMouseEvent):
+        self.setOpacity(0.2)
+
+    def mouseReleaseEvent(self, QGraphicsSceneMouseEvent):
+        self.setOpacity(1)
+
     def reAlign(self):
         self.setY(round(self.y() / 75) * 75)
 
@@ -67,23 +74,39 @@ class LayersStackScene(QGraphicsScene):
                 self.color = QColor(QColor("#0047AB"))
             self.update()
 
-
-    def __init__(self):
+    def __init__(self, layerStack):
         super().__init__()
-        item1 = LayerItem()
-        self.addItem(item1)
-        item2 = LayerItem()
-        self.addItem(item2)
-        self.activeRegion = activeRegion = self.ActiveRegion()
+        # self.
+        self.layerStack = layerStack
+        self.activeRegions = []
+        self.layerItems = []
+        for ind, layer in enumerate(self.layerStack.layers):
+            activeRegion = self.ActiveRegion()
+            self.activeRegions.append(activeRegion)
+            self.addItem(activeRegion)
+            activeRegion.moveBy(0, -5 + 75 * ind)
+
+            item1 = LayerItem()
+            self.layerItems.append(item1)
+            self.addItem(item1)
+            item1.moveBy(0, 75 * ind)
+        activeRegion = self.ActiveRegion()
+        self.activeRegions.append(activeRegion)
         self.addItem(activeRegion)
-        activeRegion.moveBy(0, 70)
-        item2.moveBy(0, 75)
+        activeRegion.moveBy(0, -5 + 75 * (ind + 1))
 
     def layerIsMoving(self, y):
-        if abs(y - round((y / 73)) * 73) < 20:
-            self.activeRegion.setHighlited(True)
+        if abs(y + 2 - round((y + 2) / 75) * 75) < 20:
+            for ind, ar in enumerate(self.activeRegions):
+                if abs(y + 2 - (ind - 1)* 75) < 20:
+                    ar.setHighlited(True)
+                else:
+                    ar.setHighlited(False)
         else:
-            self.activeRegion.setHighlited(False)
+            for ar in self.activeRegions:
+                ar.setHighlited(False)
+        if self.views():
+            self.views()[0].horizontalScrollBar().setDisabled(True)
 
     def mouseReleaseEvent(self, e: QGraphicsSceneMouseEvent):
         super().mouseReleaseEvent(e)
@@ -93,7 +116,12 @@ class LayersStackScene(QGraphicsScene):
 def main():
     app = QApplication(sys.argv)
     w = QGraphicsView()
-    w.setScene(LayersStackScene())
+    ls = LayerStack(100, 100)
+    ls.add_layer_above()
+    ls.add_layer_above()
+    w.setScene(LayersStackScene(ls))
+    w.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+    w.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
     w.show()
     sys.exit(app.exec_())
 

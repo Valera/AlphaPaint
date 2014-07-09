@@ -36,6 +36,16 @@ class Layer:
                          self.image, self.updated_rect)
             self.updated_rect = None
 
+    def composeOnOtherLayers(self, image: QImage):
+        assert(self.image.width() == image.width())
+        assert(self.image.height() == image.height())
+
+        if self.mode == self.NormalMode:
+            with QPainter(image) as p:
+                p.drawImage(QRect(0, 0, image.width(), image.height()), self.image)
+        else:
+            assert(False)
+
 
 class LayerStack:
     def __init__(self, width, height):
