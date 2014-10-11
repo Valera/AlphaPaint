@@ -3,7 +3,7 @@ import sys
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QWidget, QSlider, QApplication, QLabel, QGridLayout, QSizePolicy
 
-from paint_engine import PropertyDescription
+from paint_engine_obsolete import PropertyDescription
 
 
 __author__ = 'vfedotov'

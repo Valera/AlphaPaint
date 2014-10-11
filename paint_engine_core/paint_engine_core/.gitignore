@@ -1,0 +1,6 @@
+*.o
+docs
+obj
+bin
+*.userprefs
+main

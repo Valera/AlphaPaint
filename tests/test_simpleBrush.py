@@ -3,7 +3,7 @@ from unittest import TestCase
 from PyQt5.QtGui import QColor
 
 from layers import Layer
-from paint_engine import SimpleBrush, SimpleProperties
+from paint_engine_obsolete import SimpleBrush, SimpleProperties
 
 
 __author__ = 'vfedotov'

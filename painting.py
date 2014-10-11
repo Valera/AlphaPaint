@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import (QWidget, QScrollArea, QDialog, QApplication)
 import PyQt5.QtWidgets
 from PyQt5.QtGui import (QPainter, QColor, QMouseEvent, QPaintEvent, QKeyEvent, QCursor, QPixmap, QTabletEvent)
 
-import paint_engine
+import paint_engine_obsolete
 from layers import LayerStack
 
 
@@ -100,7 +100,7 @@ class PaintWidget(QWidget):
         self.zoomIndex = self.zoomFactorsArray.index(1)
         self.__adjustSize()
         self.brushColor = QColor(0, 0, 0)
-        self.brush_properties = paint_engine.SimpleProperties(32, 1.5, self.brushColor)
+        self.brush_properties = paint_engine_obsolete.SimpleProperties(32, 1.5, self.brushColor)
         # p = QPainter(self.canvas)
         # p.drawEllipse(0, 0, width, height)
         self.mode = None
@@ -204,7 +204,7 @@ class PaintWidget(QWidget):
 
         # print(modifiers &
 
-        self.brush = paint_engine.SimpleBrush(self.layerStack.activeLayer(), self.brush_properties)
+        self.brush = paint_engine_obsolete.SimpleBrush(self.layerStack.activeLayer(), self.brush_properties)
         x, y = self.widgetCoordinatesOnCanvas(e.x(), e.y())
         self.brush.start_stroke(x, y, 1)
         self.update()  # FIXME: ineffective
@@ -278,7 +278,7 @@ class PaintWidget(QWidget):
             self.brush.continue_stroke(x, y, e.pressure())
         else:
             self.inBrushStroke = True
-            self.brush = paint_engine.SimpleBrush(self.layerStack.activeLayer(), self.brush_properties)
+            self.brush = paint_engine_obsolete.SimpleBrush(self.layerStack.activeLayer(), self.brush_properties)
             self.brush.start_stroke(x, y, e.pressure())
         e.accept()
         self.update()

@@ -1,8 +1,8 @@
 from PyQt5.QtCore import QPoint, QRect
 from PyQt5.QtGui import (QImage, QPainter, QColor)
+import paint_engine_obsolete
 
 __author__ = 'Valeriy A. Fedotov, valeriy.fedotov@gmail.com'
-
 
 class Layer:
     NormalMode = 1
@@ -10,9 +10,9 @@ class Layer:
     def __init__(self, width, height, color=QColor(255, 255, 255)):
         self.width = width
         self.height = height
-        self.image = QImage(width, height, QImage.Format_ARGB32)
-        self.image.fill(QColor(color))
-        self.alpha = 1
+        self.image = paint_engine_obsolete.Image(width, height)
+        # self.image.fill(QColor(color))
+        # self.alpha = 1
         self.mode = self.NormalMode
         self.updated_rect = None
 
@@ -23,28 +23,27 @@ class Layer:
             self.updated_rect = self.updated_rect.united(image_rect)
         else:
             self.updated_rect = image_rect
-        qp = QPainter(self.image)
-        qp.drawImage(QPoint(x, y), qimage)
-        qp.end()
+        for i in qimage.height():
+            self.image.drawScanline(x, y, qimage.width(), qimage.scanLine(i))
 
     def pixelColor(self, x, y):
-        return QColor(self.image.pixel(x, y))
+        return QColor(self.image.pixel(x, y).r, self.image.pixel(x, y).g, self.image.pixel(x, y).b)
 
-    def drawUpdatedRect(self, qp: QPainter):
-        if self.updated_rect is not None:
-            qp.drawImage(QRect(0, 0, self.updated_rect.width(), self.updated_rect.height()),
-                         self.image, self.updated_rect)
-            self.updated_rect = None
+    # def drawUpdatedRect(self, qp: QPainter):
+    #     if self.updated_rect is not None:
+    #         qp.drawImage(QRect(0, 0, self.updated_rect.width(), self.updated_rect.height()),
+    #                      self.image, self.updated_rect)
+    #         self.updated_rect = None
 
-    def composeOnOtherLayers(self, image: QImage):
-        assert(self.image.width() == image.width())
-        assert(self.image.height() == image.height())
-
-        if self.mode == self.NormalMode:
-            with QPainter(image) as p:
-                p.drawImage(QRect(0, 0, image.width(), image.height()), self.image)
-        else:
-            assert(False)
+    # def composeOnOtherLayers(self, image: QImage):
+    #     assert(self.image.width() == image.width())
+    #     assert(self.image.height() == image.height())
+    #
+    #     if self.mode == self.NormalMode:
+    #         with QPainter(image) as p:
+    #             p.drawImage(QRect(0, 0, image.width(), image.height()), self.image)
+    #     else:
+    #         assert(False)
 
 
 class LayerStack:

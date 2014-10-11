@@ -1,6 +1,6 @@
 from unittest import TestCase
 import math
-from paint_engine import StrokeInterpolator
+from paint_engine_obsolete import StrokeInterpolator
 # import numpy as np
 
 __author__ = 'vfedotov'
