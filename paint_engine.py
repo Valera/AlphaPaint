@@ -7,4 +7,4 @@ class Image(pec.Image):
         super().__init__(width, height)
 
     def registerQImage(self, image: QImage):
-
+        pass

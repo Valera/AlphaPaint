@@ -568,7 +568,7 @@ private:
 	uint _width, _height;
 	uint _xShift, _yShift;
 	CompositionMode _mode;
-	float _pixels[]; // of size 3 * width * height
-	float _alphas[];
+	float[] _pixels; // of size 3 * width * height
+	float[] _alphas;
 	float _opacity;
 }

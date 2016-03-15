@@ -128,7 +128,7 @@ class BrushStroke
 		bs.processMouseMove(2, 2, 0.01);
 		//image.debugPrint();
 		Color r = Color(1, 0, 0), b = Color(0, 0, 0);
-		Color expected[5][5] = [
+		Color[5][5] expected = [
 			[r, r, b, b, b],
 			[r, b, r, b, b],
 			[r, r, r, r, b],

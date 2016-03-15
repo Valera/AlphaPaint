@@ -1,6 +1,6 @@
 __author__ = 'vfedotov'
 
-from celerid.support import setup, Extension
+from pyd.support import setup, Extension
 
 projName = 'paint_engine_core'
 

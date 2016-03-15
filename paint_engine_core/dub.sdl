@@ -1,0 +1,8 @@
+name "paint_engine_core"
+description "A minimal D application."
+copyright "Copyright © 2016, vfedotov"
+authors "Valeriy A. Fedotov"
+dependency "pyd" version="~>0.9.8"
+sourcePaths "paint_engine_core"
+targetName "pec"
+importPaths "paint_engine_core"
