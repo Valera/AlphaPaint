@@ -13,7 +13,7 @@ import dlib.image : hsv;
 /// y = y coordinate of point
 /// x = x coordinate of point
 ///
-/// Returns: angle in degrees [0; 360) CCW from X axis
+/// Returns: angle in degrees [0; 360) clock-wise from Y axis
 /// 
 double atan2InDegrees(double y, double x) pure nothrow @nogc
 {
@@ -23,11 +23,11 @@ double atan2InDegrees(double y, double x) pure nothrow @nogc
 class ColorCircle : CanvasWidget
 {
     private ushort _hue, _saturation, _value;
-    //private ColorDrawBuf _buf;
+    private ColorDrawBuf _buf;
     private int _cachedWidth, _cachedHeight;
 
-    enum ActiveElement { None, Ring, Square };
-    ActiveElement activeElement;
+    enum ActiveElement { None = 0, Ring = 0x1, Square = 0x2, Both = Ring | Square };
+    ActiveElement _activeElement;
 
     Rect squareGeometry() {
         immutable len = min(width, height);
@@ -52,65 +52,42 @@ class ColorCircle : CanvasWidget
         return RingGeometry(width / 2.0, height / 2.0, 0.4 * len, 0.44 * len, 3.0);
     }
 
-    /// Hello
-    ///
-    /// Params:
-    ///
-    /// id =
     this(string id)
     {
         super(id);
+        _activeElement = ActiveElement.Both;
+    }
+
+    ~this()
+    {
+        if (_buf) {
+            destroy(_buf);
+        }
     }
 
     override void doDraw(DrawBuf buf, Rect rc)
     {
-        /+
-        writeln("doDraw start");
         if (_buf is null) {
             _buf = new ColorDrawBuf(width, height);
-            _buf.addRef();
-        }
-        if (_cachedWidth != width || _cachedHeight != height) {
-            writeln(width);
-            writeln(height);
-            _cachedWidth = width;
-            _cachedHeight = height;
+            _buf.fill(0x00C8C8C8);
+            redrawRing();
+            redrawSquare();
+            _buf.invalidate();
+        } else if (_buf.width != width || _buf.height != height) {
             _buf.resize(width, height);
-            //updateCache();
+            _buf.fill(0x00C8C8C8);
+            redrawRing();
+            redrawSquare();
+            _buf.invalidate();
+        } else if (_activeElement & ActiveElement.Ring) {
+            redrawSquare();
+            _buf.invalidate();
         }
-        writeln(_buf.width);
-        writeln(buf.width);
-        writeln(_buf.height);
-        writeln(buf.height);
         buf.drawImage(0, 0, _buf);
-        +/
-        //buf.drawPixel(10, 10, 0x00FF0000);
-        writeln(rc);
-        updateCache(buf);
-        writeln("doDraw Ok");
+        drawCursors(buf);
     }
 
-
-    /+
-    override void onDraw(DrawBuf buf)
-    {
-        writeln("onDraw start");
-        //buf.drawPixel(10, 10, 0xFFFF0000);
-        immutable uint black = 0x00000000;
-        immutable uint red = 0x00FF0000;
-        //buf.drawFrame(Rect(10, 10, 20, 20), black, Rect(1, 1, 1, 1), red);
-        buf.drawPixel(40, 40, 0x00FF0000);
-        //buf.drawFrame(Rect(100, 100, 120, 120), black, Rect(1, 1, 1, 1), red);
-        buf.drawPixel(50, 50, 0x000000FF);
-        //buf.drawFrame(Rect(10, 10, 20, 20), black, Rect(1, 1, 1, 1), red);
-        buf.drawPixel(200, 200, 0x0000FF00);
-
-        writeln("onDraw Ok");
-    }
-    +/
-
-
-    void updateCache(DrawBuf _buf)
+    void redrawRing()
     {
         writeln("updateCache start");
         immutable uint w = width;
@@ -118,7 +95,7 @@ class ColorCircle : CanvasWidget
         immutable len = min(w, h);
 
         //_buf.fill(0xFFC8C8C8);
-        _buf.fill(0x00C8C8C8);
+        //_buf.fill(0x00C8C8C8);
         immutable uint black1 = 0x00000000;
         immutable uint red1 = 0x00FF0000;
         _buf.drawFrame(Rect(10, 10, 20, 20), black1, Rect(1, 1, 1, 1), red1);
@@ -144,18 +121,20 @@ class ColorCircle : CanvasWidget
                 if (rIn - border <= r && r < rIn) { // inner border
                     _buf.drawPixel(to!int(round(x)), to!int(round(y)), black);
                 } else if (rIn <= r && r < rOut) { // color bing band
-            //        writeln(to!int(round(x)), " ", to!int(round(y)));
                     _buf.drawPixel(to!int(round(x)), to!int(round(y)), ringColor);
                 } else if (rOut <= r && r < rOut + border) { // outer border
                     _buf.drawPixel(to!int(round(x)), to!int(round(y)), black);
                 }
             }
         }
-        immutable int cursorX = cast(int)(w2 - (rIn + rOut) / 2.0 * cos(-(PI * _hue / 180 + PI / 2)));
-        immutable int cursorY = cast(int)(h2 + (rIn + rOut) / 2.0 * sin(-(PI * _hue / 180 + PI / 2)));
-        _buf.drawFrame(Rect(cursorX - 3, cursorY - 3, cursorX + 3, cursorY + 3), black1, Rect(1, 1, 1, 1), red1);
+    }
 
+    void redrawSquare()
+    {
         immutable float
+            w2 = width / 2.0,
+            h2 = height / 2.0,
+            len = min(width, height),
             rSqr = 0.38 * len,
             halfSide = rSqr * sqrt(2.0) / 2,
             x0 = floor(w2-halfSide),
@@ -171,37 +150,40 @@ class ColorCircle : CanvasWidget
                 auto s = (x - x0) / (x1 - x0);
                 assert(abs(v) <= 1 && abs(s) <= 1);
                 auto squareColor4f = hsv(_hue, s, v, 1);
-/+                if (x == x0) {
-                    writeln(squareColor4f);
-                }
-+/
-                // squareColor4f[1]
-                // squareColor4f[2]
                 uint squareColor = ((to!ubyte(squareColor4f[0] * 255)) << 16)
                     + ((to!ubyte(squareColor4f[1] * 255)) << 8)
                     + to!ubyte(squareColor4f[2] * 255);
-/+                if (x == x0) {
-                    writefln("%x", squareColor);
-                }
-+/
                 
                 _buf.drawPixel(to!int(round(x)), to!int(round(y)), squareColor);
             }
         }
-        //immutable uint black1 = 0x00000000;
-        //immutable uint red1 = 0x00FF0000;
-        immutable int yc = cast(int)(y0 + cast(float) _value / 255 * (y1 - y0));
-        immutable int xc = cast(int)(x0 + cast(float) _saturation / 255 * (x1 - x0));
-        _buf.drawFrame(Rect(xc - 3, yc - 3, xc + 3, yc + 3), black1, Rect(1, 1, 1, 1), red1);
-/+        writeln("a ", to!ubyte(1) << 16);
-        writeln("b ", to!ubyte(1) * 256 * 256);
-        writeln("UpdateCache Ok");
-+/
+    }
+
+    void drawCursors (DrawBuf buf)
+    {
+        immutable uint black1 = 0x00000000;
+        immutable uint red1 = 0x00FF0000;
+
+        auto square = squareGeometry();
+        with(square) {
+            immutable int yc = cast(int)(top + cast(float) _value / 255 * (bottom - top));
+            immutable int xc = cast(int)(left + cast(float) _saturation / 255 * (right - left));
+            buf.drawFrame(Rect(xc - 3, yc - 3, xc + 3, yc + 3), black1, Rect(1, 1, 1, 1), red1);
+        }
+
+        immutable ring = ringGeometry;
+        with (ring) {
+            immutable int cursorX = cast(int)(centerX - (rIn + rOut) / 2.0 * cos(-(PI * _hue / 180 + PI / 2)));
+            immutable int cursorY = cast(int)(centerY + (rIn + rOut) / 2.0 * sin(-(PI * _hue / 180 + PI / 2)));
+            buf.drawFrame(Rect(cursorX - 3, cursorY - 3, cursorX + 3, cursorY + 3), black1, Rect(1, 1, 1, 1), red1);
+        }
+
     }
 
     override bool onMouseEvent(MouseEvent event)
     {
         if (!event.lbutton.isDown) {
+            _activeElement = ActiveElement.None;
             return true;
         }
         writeln(event.x, " ", event.y);
@@ -211,7 +193,7 @@ class ColorCircle : CanvasWidget
         if (square.isPointInside(event.x, event.y)) {
             _value = cast(ushort)(255 * (event.y - square.top) / (square.height - 1));
             _saturation = cast(ushort)(255 * (event.x - square.left) / (square.width - 1));
-            activeElement = ActiveElement.Square;
+            _activeElement = ActiveElement.Square;
             writeln("_v ", _value, "_s ", _saturation);
         }
 
@@ -219,10 +201,12 @@ class ColorCircle : CanvasWidget
         immutable dx = event.x - ring.centerX, dy = event.y - ring.centerY;
         immutable r = hypot(dx, dy);
         writeln(ring.rIn, " ", r, " ", ring.rOut);
-        if (ring.rIn <= r && r <= ring.rOut) {
+        if (ring.rIn <= r && r <= ring.rOut || _activeElement == ActiveElement.Ring) {
             _hue = cast(ushort)atan2InDegrees(dy, dx);
+            _activeElement = ActiveElement.Ring;
             writeln("new hue ", _hue);
         }
+        invalidate();
 
 
         return true;
