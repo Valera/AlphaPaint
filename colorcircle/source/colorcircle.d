@@ -23,6 +23,12 @@ double atan2InDegrees(double y, double x) pure nothrow @nogc
 class ColorCircle : CanvasWidget
 {
     private ushort _hue, _saturation, _value;
+    invariant { 
+        import std.algorithm.sorting;
+        assert (ordered(0, _hue, 360));
+        assert (ordered(0, _value, 255));
+        assert (ordered(0, _saturation, 255));
+    }
     private ColorDrawBuf _buf;
     private int _cachedWidth, _cachedHeight;
 
@@ -190,11 +196,15 @@ class ColorCircle : CanvasWidget
 
         // TODO immutable
         auto square = squareGeometry();
-        if (square.isPointInside(event.x, event.y)) {
-            _value = cast(ushort)(255 * (event.y - square.top) / (square.height - 1));
-            _saturation = cast(ushort)(255 * (event.x - square.left) / (square.width - 1));
+        if ((square.isPointInside(event.x, event.y) && _activeElement != ActiveElement.Ring)
+                || _activeElement == ActiveElement.Square) {
+            import std.algorithm.comparison;
+            _value = cast(ushort)clamp(255.0 * (event.y - square.top) / (square.height - 1), 0, 255);
+            _saturation = cast(ushort)clamp(255.0 * (event.x - square.left) / (square.width - 1), 0, 255);
             _activeElement = ActiveElement.Square;
             writeln("_v ", _value, "_s ", _saturation);
+            invalidate();
+            return true;
         }
 
         immutable ring = ringGeometry;
@@ -205,9 +215,9 @@ class ColorCircle : CanvasWidget
             _hue = cast(ushort)atan2InDegrees(dy, dx);
             _activeElement = ActiveElement.Ring;
             writeln("new hue ", _hue);
+            invalidate();
+        return true;
         }
-        invalidate();
-
 
         return true;
     }

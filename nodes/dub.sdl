@@ -1,0 +1,4 @@
+name "nodes"
+description "A minimal D application."
+copyright "Copyright © 2016, vfedotov"
+authors "vfedotov"
